@@ -1,0 +1,13 @@
+# Автоответ @kodsyz: каждые 5 минут дёргаем /api/run на Vercel
+name: autoreply
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: |
+          curl -fsS -X POST "${{ secrets.BOT_URL }}/api/run" -H "x-run-secret: ${{ secrets.RUN_SECRET }}"

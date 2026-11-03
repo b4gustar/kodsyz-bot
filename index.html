@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kodsyz · кодовые слова</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0E1116; --paper:#F5F5EF; --card:#fff; --line:#E2E4DC; --mute:#5E6B78; --lime:#D4FF4A; --red:#C8443A; --amber:#9A6A00; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.45 Onest, system-ui, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .mark { width: 28px; height: 28px; }
+  .meta { color: var(--mute); font: 13px "JetBrains Mono", monospace; }
+  button { font: 600 14px Onest, sans-serif; border-radius: 10px; padding: 10px 16px; border: 1px solid var(--ink); background: var(--ink); color: #fff; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  button:disabled { opacity: .5; cursor: default; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--mute); font-size: 13px; }
+  .stat.warn { background: var(--lime); border-color: var(--lime); }
+  .words { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .chip i { font-style: normal; color: var(--mute); margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .chip.on i { color: #b9c0c8; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--mute); font-weight: 600; background: #FAFAF7; }
+  tr:last-child td { border-bottom: 0; }
+  .st { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .st.ok { background: #EEF6D6; color: #3F5200; }
+  .st.wait { background: var(--lime); color: var(--ink); }
+  .st.late { background: #F6E4E2; color: var(--red); }
+  .user a { color: var(--ink); font-weight: 600; text-decoration: none; }
+  .txt { color: var(--mute); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log { margin-top: 16px; font: 13px "JetBrains Mono", monospace; color: var(--mute); white-space: pre-wrap; }
+  .empty { padding: 40px; text-align: center; color: var(--mute); }
+  .login { max-width: 360px; margin: 18vh auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .login input { width: 100%; font: 15px Onest, sans-serif; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } .txt, .col-post { display: none; } th, td { padding: 9px 10px; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let pass = (() => { try { return localStorage.getItem("kz-pass") || ""; } catch { return ""; } })();
+let data = null, word = null, tab = "все", runLog = "";
+const MARK = '<svg class="mark" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#0E1116"/><rect x="14" y="18" width="30" height="6" rx="3" fill="#fff"/><rect x="14" y="30" width="20" height="6" rx="3" fill="#fff" opacity=".55"/><rect x="36" y="40" width="13" height="16" rx="3" fill="#D4FF4A"/></svg>';
+
+function login(msg = "") {
+  $("#app").innerHTML = `<form class="login" id="f">${MARK}<h2 style="margin:12px 0 0">Кодовые слова</h2>
+    <input type="password" id="p" placeholder="Пароль панели" autofocus><button style="width:100%">Войти</button>
+    <div class="meta" style="margin-top:10px;color:#C8443A">${esc(msg)}</div></form>`;
+  $("#f").onsubmit = (e) => { e.preventDefault(); pass = $("#p").value; try { localStorage.setItem("kz-pass", pass); } catch {} load(); };
+}
+
+async function load() {
+  if (!pass) return login();
+  const r = await fetch("/api/status", { headers: { "x-pass": pass } });
+  if (r.status === 401) return login("Неверный пароль");
+  data = await r.json();
+  if (data.error) { $("#app").innerHTML = `<div class="empty">Ошибка: ${esc(data.error)}</div>`; return; }
+  render();
+}
+
+async function runNow() {
+  $("#run").disabled = true; $("#run").textContent = "Отвечаю…";
+  const r = await fetch("/api/run", { method: "POST", headers: { "x-pass": pass } });
+  const j = await r.json();
+  runLog = j.error ? `ошибка: ${j.error}` : (j.log.length ? j.log.join("\n") : "Новых кодовых слов нет");
+  await load();
+}
+
+function render() {
+  const items = data.items;
+  const count = (st) => items.filter((x) => x.status === st).length;
+  const byWord = Object.fromEntries(data.keywords.map((k) => [k, items.filter((x) => x.word === k).length]));
+  let rows = items.filter((x) => (!word || x.word === word) && (tab === "все" || x.status === tab));
+  const cls = { "отвечено": "ok", "ждёт": "wait", "окно истекло": "late" };
+  $("#app").innerHTML = `
+    <header>
+      <div class="brand">${MARK} Кодовые слова · @kodsyz</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="meta">обновлено ${new Date(data.at).toLocaleTimeString("ru-RU")}</span>
+        <button class="ghost" onclick="load()">Обновить</button>
+        <button id="run" onclick="runNow()" ${count("ждёт") ? "" : "disabled"}>Ответить ожидающим (${count("ждёт")})</button>
+      </div>
+    </header>
+    <div class="stats">
+      <div class="stat"><b>${items.length}</b><span>всего за 7 дней</span></div>
+      <div class="stat"><b>${count("отвечено")}</b><span>отвечено</span></div>
+      <div class="stat ${count("ждёт") ? "warn" : ""}"><b>${count("ждёт")}</b><span>ждут ответа</span></div>
+      <div class="stat"><b>${count("окно истекло")}</b><span>окно ответа истекло</span></div>
+    </div>
+    <div class="words">
+      <span class="chip ${!word ? "on" : ""}" data-w="">Все слова<i>${items.length}</i></span>
+      ${data.keywords.map((k) => `<span class="chip ${word === k ? "on" : ""}" data-w="${k}">${k}<i>${byWord[k]}</i></span>`).join("")}
+    </div>
+    <div class="tabs">${["все", "ждёт", "отвечено", "окно истекло"].map((t) => `<button class="${tab === t ? "" : "ghost"}" data-t="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div>
+    ${rows.length ? `<table><thead><tr><th>Кто</th><th>Слово</th><th>Где</th><th class="txt">Текст</th><th>Когда</th><th>Статус</th></tr></thead><tbody>
+      ${rows.map((x) => `<tr>
+        <td class="user"><a href="https://instagram.com/${esc(x.user)}" target="_blank" rel="noopener">@${esc(x.user)}</a></td>
+        <td>${esc(x.word)}</td>
+        <td>${x.post ? `<a href="${esc(x.post)}" target="_blank" rel="noopener">${esc(x.source)}</a>` : esc(x.source)}</td>
+        <td class="txt">${esc(x.text)}</td>
+        <td class="meta">${new Date(x.time).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+        <td><span class="st ${cls[x.status]}">${esc(x.status)}</span></td></tr>`).join("")}
+      </tbody></table>` : `<div class="empty">Пока никто не написал кодовое слово${word ? " " + word : ""}</div>`}
+    <div class="log">${esc(runLog)}</div>`;
+  document.querySelectorAll("[data-w]").forEach((el) => (el.onclick = () => { word = el.dataset.w || null; render(); }));
+  document.querySelectorAll("[data-t]").forEach((el) => (el.onclick = () => { tab = el.dataset.t; render(); }));
+}
+
+load();
+setInterval(() => pass && load(), 60000);
+</script>
+</body>
+</html>

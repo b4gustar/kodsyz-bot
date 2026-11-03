@@ -1,0 +1,6 @@
+{
+  "name": "kodsyz-bot",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" }
+}
