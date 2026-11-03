@@ -1,8 +1,8 @@
-# Автоответ @kodsyz: каждые 5 минут дёргаем /api/run на Vercel
+# Автоответ @kodsyz: каждые 30 минут дёргаем /api/run на Vercel
 name: autoreply
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/30 * * * *"  # приватный репозиторий: 30 мин укладываются в бесплатные 2000 минут Actions
   workflow_dispatch:
 jobs:
   run:
